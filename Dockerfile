@@ -17,7 +17,8 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV TZ=Asia/Seoul
 
-# Prisma 클라이언트 생성
+# Prisma 클라이언트 생성 (빌드 시에는 더미 DATABASE_URL 사용)
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy?schema=public"
 RUN npx prisma generate
 
 RUN npm run build
