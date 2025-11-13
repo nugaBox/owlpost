@@ -17,7 +17,8 @@ export async function createAdminUser(
   });
 
   if (existingUser) {
-    throw new Error(`이미 존재하는 사용자입니다: ${email}`);
+    console.log(`ℹ️  이미 존재하는 사용자입니다: ${email}`);
+    return existingUser;
   }
 
   // 비밀번호 해싱

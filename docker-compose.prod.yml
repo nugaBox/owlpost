@@ -63,10 +63,8 @@ services:
 
   # OwlPost 웹 애플리케이션 (프로덕션)
   webapp:
-    image: ${DOCKER_IMAGE:-owlpost:test}
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ${DOCKER_IMAGE:-nugabox/owlpost:latest}
+    pull_policy: always
     container_name: owlpost-webapp
     environment:
       NODE_ENV: production

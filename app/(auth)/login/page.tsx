@@ -115,7 +115,7 @@ function LoginForm() {
               className="flex-1"
               onClick={() => setLoginType("password")}
             >
-              아이디/비밀번호
+              이메일/비밀번호
             </Button>
           </div>
 

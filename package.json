@@ -13,10 +13,12 @@
     "db:push": "prisma db push",
     "create-admin": "node --import tsx lib/api/scripts/create-admin.ts",
     "reset-password": "node --import tsx lib/api/scripts/reset-password.ts",
+    "seed-dummy": "node --import tsx lib/api/scripts/seed-dummy-data.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
+    "@ckeditor/ckeditor5-react": "^11.0.0",
     "@prisma/client": "^6.19.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",
@@ -24,6 +26,7 @@
     "@types/mailparser": "^3.4.6",
     "@types/pg": "^8.15.6",
     "bcryptjs": "^3.0.3",
+    "ckeditor5": "^47.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

@@ -27,6 +27,10 @@ model User {
   sessions     Session[]
   settings      UserSettings?
   mailAccounts  MailAccount[]
+  mailFolders   MailFolder[]
+  mailMessages  MailMessage[]
+  signatures    Signature[]
+  scheduledMails ScheduledMail[]
 
   @@index([email])
   @@map("users")
@@ -116,8 +120,155 @@ model MailAccount {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // 관계
+  folders     MailFolder[]
+  messages    MailMessage[]
+  scheduledMails ScheduledMail[]
+
   @@index([userId])
   @@map("mail_accounts")
+}
+
+// 메일함 (폴더)
+model MailFolder {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     MailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  name        String   // 폴더 이름
+  type        String   // inbox | sent | drafts | trash | custom
+  parentId    String?  // 부모 폴더 ID (중첩 폴더 지원)
+  parent      MailFolder? @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children    MailFolder[] @relation("FolderHierarchy")
+  color       String?  // 폴더 색상 (hex)
+  order       Int      @default(0) // 정렬 순서
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 관계
+  messages    MailMessage[]
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([parentId])
+  @@map("mail_folders")
+}
+
+// 메일 메시지
+model MailMessage {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     MailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  folderId    String
+  folder      MailFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  
+  // 메일 헤더
+  messageId   String?  @unique // RFC 822 Message-ID
+  subject     String?
+  from        String   // 발신자 이메일
+  fromName    String?  // 발신자 이름
+  to          String[] // 수신자 이메일 배열
+  cc          String[] // 참조 이메일 배열
+  bcc         String[] // 숨은 참조 이메일 배열
+  replyTo     String?  // 회신 주소
+  
+  // 메일 본문
+  textBody    String?  @db.Text // 텍스트 본문
+  htmlBody    String?  @db.Text // HTML 본문
+  
+  // 메타데이터
+  date        DateTime // 메일 날짜
+  isRead      Boolean  @default(false)
+  isStarred   Boolean  @default(false)
+  isImportant Boolean  @default(false)
+  isDraft     Boolean  @default(false)
+  isDeleted   Boolean  @default(false)
+  
+  // 외부 메일 서버 정보
+  uid         Int?     // IMAP UID 또는 JMAP ID
+  flags       String[] // 메일 플래그
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 관계
+  attachments Attachment[]
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([folderId])
+  @@index([messageId])
+  @@index([date])
+  @@index([isRead])
+  @@map("mail_messages")
+}
+
+// 첨부파일
+model Attachment {
+  id          String   @id @default(cuid())
+  messageId   String
+  message     MailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  filename    String   // 파일명
+  contentType String   // MIME 타입
+  size        Int      // 파일 크기 (bytes)
+  path        String   // 저장 경로 (MinIO 또는 로컬)
+  cid         String?  // Content-ID (인라인 이미지용)
+  createdAt   DateTime @default(now())
+
+  @@index([messageId])
+  @@map("attachments")
+}
+
+// 서명
+model Signature {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String   // 서명 이름
+  content     String   @db.Text // HTML 서명 내용
+  isDefault   Boolean  @default(false) // 기본 서명 여부
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("signatures")
+}
+
+// 예약 발송
+model ScheduledMail {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId   String
+  account     MailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  
+  // 메일 내용
+  to          String[] // 수신자
+  cc          String[] // 참조
+  bcc         String[] // 숨은 참조
+  subject     String?  // 제목
+  textBody    String?  @db.Text // 텍스트 본문
+  htmlBody    String?  @db.Text // HTML 본문
+  
+  // 예약 정보
+  scheduledAt DateTime // 예약 발송 시간
+  sentAt      DateTime? // 실제 발송 시간
+  status      String   @default("pending") // pending | sent | failed | cancelled
+  
+  // 첨부파일 정보 (JSON)
+  attachments Json?   // [{filename, contentType, path, size}]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([accountId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@map("scheduled_mails")
 }
 
 // 검증 토큰 (이메일 인증 등)

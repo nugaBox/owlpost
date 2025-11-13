@@ -34,9 +34,9 @@ ENV TZ=Asia/Seoul
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# 프로덕션에서 필요한 패키지 설치 (prisma, dotenv)
+# 프로덕션에서 필요한 패키지 설치 (prisma, dotenv, tsx)
 COPY --from=builder /app/package.json ./
-RUN npm install --production --legacy-peer-deps dotenv prisma @prisma/client && \
+RUN npm install --production --legacy-peer-deps dotenv prisma @prisma/client tsx && \
     chown -R nextjs:nodejs /app/node_modules
 
 COPY --from=builder /app/public ./public
