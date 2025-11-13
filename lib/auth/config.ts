@@ -77,11 +77,6 @@ export const authOptions: NextAuthConfig = {
     signIn: "/login",
     error: "/login",
   },
-  // NextAuth v5 beta에서 리다이렉트 URL 설정
-  redirect: {
-    signIn: "/",
-    signOut: "/login",
-  },
   callbacks: {
     async signIn({ user, account, credentials }) {
       console.log("[Auth] SignIn callback:", { user, account, credentials });
