@@ -1,0 +1,131 @@
+// OwlPost - Comin Mail
+// Prisma 스키마
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 사용자 모델
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?   // OAuth 사용자는 null
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // 관계
+  accounts      Account[]
+  sessions     Session[]
+  settings      UserSettings?
+  mailAccounts  MailAccount[]
+
+  @@index([email])
+  @@map("users")
+}
+
+// OAuth 계정
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+// 세션
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// 사용자 설정
+model UserSettings {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  language  String   @default("ko")
+  timezone  String   @default("Asia/Seoul")
+  theme     String   @default("light") // light | dark | system
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_settings")
+}
+
+// 애플리케이션 설정
+model AppSettings {
+  id          String   @id @default(cuid())
+  title       String   @default("OwlPost")
+  description String   @default("직관적인 웹메일 클라이언트")
+  icon        String?   // 아이콘 URL 또는 경로
+  favicon     String?  // 파비콘 URL 또는 경로
+  logo        String?  // 로고 URL 또는 경로
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+// 메일 계정 (IMAP/SMTP/JMAP 연결 정보)
+model MailAccount {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String   // 계정 표시 이름
+  email       String   // 메일 주소
+  protocol    String   // imap | smtp | jmap
+  imapHost    String?
+  imapPort    Int?
+  imapSecure  Boolean  @default(false)
+  smtpHost    String?
+  smtpPort    Int?
+  smtpSecure  Boolean  @default(false)
+  jmapUrl     String?
+  username    String
+  password    String   @db.Text // 암호화된 비밀번호
+  isActive    Boolean  @default(true)
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("mail_accounts")
+}
+
+// 검증 토큰 (이메일 인증 등)
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

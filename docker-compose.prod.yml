@@ -1,0 +1,131 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - 웹메일 서비스 DB
+  postgres:
+    image: postgres:16-alpine
+    container_name: owlpost-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-owlpost}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-owlpost_password}
+      POSTGRES_DB: ${POSTGRES_DB:-owlpost}
+      TZ: Asia/Seoul
+      POSTGRES_INITDB_ARGS: "--locale=ko_KR.UTF-8 --encoding=UTF8"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-owlpost}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - owlpost-network
+    restart: unless-stopped
+
+  # Redis - 캐시/세션 저장소 (선택사항)
+  redis:
+    image: redis:7-alpine
+    container_name: owlpost-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - owlpost-network
+    restart: unless-stopped
+
+  # MinIO - 첨부파일 저장소
+  minio:
+    image: minio/minio:latest
+    container_name: owlpost-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+      TZ: Asia/Seoul
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - owlpost-network
+    restart: unless-stopped
+
+  # OwlPost 웹 애플리케이션 (프로덕션)
+  webapp:
+    image: ${DOCKER_IMAGE:-owlpost/owlpost:latest}
+    container_name: owlpost-webapp
+    environment:
+      NODE_ENV: production
+      TZ: Asia/Seoul
+      DATABASE_URL: postgresql://${POSTGRES_USER:-owlpost}:${POSTGRES_PASSWORD:-owlpost_password}@postgres:5432/${POSTGRES_DB:-owlpost}?schema=public
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET_NAME: ${MINIO_BUCKET_NAME:-owlpost-attachments}
+      STALWART_IMAP_HOST: ${STALWART_IMAP_HOST:-stalwart-mail}
+      STALWART_IMAP_PORT: ${STALWART_IMAP_PORT:-143}
+      STALWART_IMAP_SECURE: ${STALWART_IMAP_SECURE:-false}
+      STALWART_SMTP_HOST: ${STALWART_SMTP_HOST:-stalwart-mail}
+      STALWART_SMTP_PORT: ${STALWART_SMTP_PORT:-25}
+      STALWART_SMTP_SECURE: ${STALWART_SMTP_SECURE:-false}
+      STALWART_JMAP_URL: ${STALWART_JMAP_URL:-http://stalwart-mail:8080/jmap}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      OAUTH_ENABLED: ${OAUTH_ENABLED:-false}
+      OAUTH_PROVIDER: ${OAUTH_PROVIDER:-}
+      OAUTH_CLIENT_ID: ${OAUTH_CLIENT_ID:-}
+      OAUTH_CLIENT_SECRET: ${OAUTH_CLIENT_SECRET:-}
+      OAUTH_AUTHORIZATION_URL: ${OAUTH_AUTHORIZATION_URL:-}
+      OAUTH_TOKEN_URL: ${OAUTH_TOKEN_URL:-}
+      OAUTH_USERINFO_URL: ${OAUTH_USERINFO_URL:-}
+      NEXT_PUBLIC_OAUTH_ENABLED: ${OAUTH_ENABLED:-false}
+      NEXT_PUBLIC_OAUTH_PROVIDER: ${OAUTH_PROVIDER:-}
+      APP_NAME: ${APP_NAME:-owlpost}
+      APP_VERSION: ${APP_VERSION:-0.0.1}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      LOG_LEVEL: ${LOG_LEVEL:-warn}
+    ports:
+      - "${WEBAPP_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    networks:
+      - owlpost-network
+    restart: unless-stopped
+    command: >
+      sh -c "
+        npx prisma generate &&
+        (npx prisma migrate deploy 2>/dev/null || npx prisma db push --accept-data-loss) &&
+        node server.js
+      "
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+
+networks:
+  owlpost-network:
+    driver: bridge
+

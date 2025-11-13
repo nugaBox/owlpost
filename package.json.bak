@@ -1,5 +1,5 @@
 {
-  "name": "owlpost",
+  "name": "comin-mail",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -12,7 +12,6 @@
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
     "create-admin": "node --import tsx lib/api/scripts/create-admin.ts",
-    "reset-password": "node --import tsx lib/api/scripts/reset-password.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\""
   },
   "dependencies": {
