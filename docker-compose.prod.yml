@@ -63,7 +63,10 @@ services:
 
   # OwlPost 웹 애플리케이션 (프로덕션)
   webapp:
-    image: ${DOCKER_IMAGE:-owlpost/owlpost:latest}
+    image: ${DOCKER_IMAGE:-owlpost:test}
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: owlpost-webapp
     environment:
       NODE_ENV: production
@@ -112,8 +115,7 @@ services:
     restart: unless-stopped
     command: >
       sh -c "
-        npx prisma generate &&
-        (npx prisma migrate deploy 2>/dev/null || npx prisma db push --accept-data-loss) &&
+        (npx prisma migrate deploy --schema=./prisma/schema.prisma 2>/dev/null || npx prisma db push --schema=./prisma/schema.prisma --accept-data-loss) &&
         node server.js
       "
 

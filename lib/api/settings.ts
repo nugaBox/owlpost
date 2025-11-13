@@ -19,20 +19,31 @@ const DEFAULT_SETTINGS: AppSettingsData = {
  * 애플리케이션 설정 가져오기
  */
 export async function getAppSettings(): Promise<AppSettingsData> {
-  const settings = await prisma.appSettings.findFirst();
-
-  if (!settings) {
-    // 기본 설정이 없으면 생성
-    return await createDefaultSettings();
+  // 빌드 시에는 데이터베이스 연결이 없으므로 기본값 반환
+  if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
+    return DEFAULT_SETTINGS;
   }
 
-  return {
-    title: settings.title,
-    description: settings.description,
-    icon: settings.icon || undefined,
-    favicon: settings.favicon || undefined,
-    logo: settings.logo || undefined,
-  };
+  try {
+    const settings = await prisma.appSettings.findFirst();
+
+    if (!settings) {
+      // 기본 설정이 없으면 생성
+      return await createDefaultSettings();
+    }
+
+    return {
+      title: settings.title,
+      description: settings.description,
+      icon: settings.icon || undefined,
+      favicon: settings.favicon || undefined,
+      logo: settings.logo || undefined,
+    };
+  } catch (error) {
+    // 데이터베이스 연결 실패 시 기본값 반환
+    console.warn("Failed to fetch app settings, using defaults:", error);
+    return DEFAULT_SETTINGS;
+  }
 }
 
 /**

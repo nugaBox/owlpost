@@ -1,6 +1,7 @@
 // OwlPost - SMTP 클라이언트
 
 import nodemailer from "nodemailer";
+import type { Transporter, SendMailOptions as NodemailerSendMailOptions, SentMessageInfo } from "nodemailer";
 
 export interface SMTPConfig {
   host: string;
@@ -27,7 +28,7 @@ export interface SendMailOptions {
 }
 
 export class SMTPClient {
-  private transporter: nodemailer.Transporter;
+  private transporter: Transporter;
   private config: SMTPConfig;
 
   constructor(smtpConfig: SMTPConfig) {
@@ -56,8 +57,8 @@ export class SMTPClient {
     }
   }
 
-  async sendMail(options: SendMailOptions): Promise<nodemailer.SentMessageInfo> {
-    const mailOptions: nodemailer.SendMailOptions = {
+  async sendMail(options: SendMailOptions): Promise<SentMessageInfo> {
+    const mailOptions: NodemailerSendMailOptions = {
       from: options.from,
       to: Array.isArray(options.to) ? options.to.join(", ") : options.to,
       cc: options.cc ? (Array.isArray(options.cc) ? options.cc.join(", ") : options.cc) : undefined,

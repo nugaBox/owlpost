@@ -109,8 +109,9 @@ export class IMAPClient {
         const traverse = (box: Imap.MailBox, prefix: string = "") => {
           boxNames.push(prefix);
           if (box.children) {
-            Object.keys(box.children).forEach((child) => {
-              traverse(box.children[child], prefix ? `${prefix}/${child}` : child);
+            const children = box.children;
+            Object.keys(children).forEach((child) => {
+              traverse(children[child], prefix ? `${prefix}/${child}` : child);
             });
           }
         };
@@ -177,7 +178,15 @@ export class IMAPClient {
                 const parsed = await simpleParser(buffer);
                 subject = parsed.subject || "";
                 from = parsed.from?.text || "";
-                to = parsed.to ? parsed.to.map((addr) => addr.text || addr.address || "") : [];
+                to = parsed.to 
+                  ? (Array.isArray(parsed.to) 
+                      ? parsed.to.flatMap((addr) => 
+                          addr.value ? addr.value.map((e) => e.address || e.name || "") : [addr.text || ""]
+                        )
+                      : parsed.to.value 
+                        ? parsed.to.value.map((e) => e.address || e.name || "")
+                        : [parsed.to.text || ""])
+                  : [];
                 body = parsed.text || "";
                 htmlBody = parsed.html || undefined;
 
@@ -262,7 +271,15 @@ export class IMAPClient {
               const parsed = await simpleParser(buffer);
               subject = parsed.subject || "";
               from = parsed.from?.text || "";
-              to = parsed.to ? parsed.to.map((addr) => addr.text || addr.address || "") : [];
+              to = parsed.to 
+                ? (Array.isArray(parsed.to) 
+                    ? parsed.to.flatMap((addr) => 
+                        addr.value ? addr.value.map((e) => e.address || e.name || "") : [addr.text || ""]
+                      )
+                    : parsed.to.value 
+                      ? parsed.to.value.map((e) => e.address || e.name || "")
+                      : [parsed.to.text || ""])
+                : [];
               body = parsed.text || "";
               htmlBody = parsed.html || undefined;
 
